@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { mockReport } from "@/data/mockReport";
+import { loadReport } from "@/lib/report-loader";
 import { Status } from "@/types";
 
 export default function Dashboard() {
@@ -9,20 +9,22 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
+  const report = useMemo(() => loadReport(), []);
+
   const filteredResults = useMemo(() => {
-    if (!mockReport || !mockReport.results) return [];
+    if (!report || !report.results) return [];
     
-    return mockReport.results.filter((res) => {
+    return report.results.filter((res) => {
       const matchesFilter = filter === "ALL" || res.status === filter;
       const matchesSearch = 
         res.test_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
         res.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
-  }, [filter, searchQuery]);
+  }, [filter, searchQuery, report]);
 
   // Error / Empty States for the report itself
-  if (!mockReport) {
+  if (!report) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
         <div className="text-center bg-white p-8 rounded-xl shadow-sm border border-red-100 max-w-md w-full">
@@ -67,37 +69,37 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Contract Conformance</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-500">
-                <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Profile: {mockReport.profile}</span>
-                <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Fixture: {mockReport.fixture}</span>
+                <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Profile: {report.profile}</span>
+                <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Fixture: {report.fixture}</span>
                 <span className="italic">(Mocked Data)</span>
               </div>
             </div>
             <div className="text-left sm:text-right">
               <div className="text-sm font-medium text-gray-500 mb-1">Overall Result</div>
-              {getBadge(mockReport.status)}
+              {getBadge(report.status)}
             </div>
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mt-8">
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500">Total</div>
-              <div className="text-3xl font-bold text-gray-900 mt-1">{mockReport.summary.total}</div>
+              <div className="text-3xl font-bold text-gray-900 mt-1">{report.summary.total}</div>
             </div>
             <div className="p-4 bg-green-50 rounded-lg border border-green-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-green-700">Passed</div>
-              <div className="text-3xl font-bold text-green-800 mt-1">{mockReport.summary.passed}</div>
+              <div className="text-3xl font-bold text-green-800 mt-1">{report.summary.passed}</div>
             </div>
             <div className="p-4 bg-red-50 rounded-lg border border-red-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-red-700">Failed</div>
-              <div className="text-3xl font-bold text-red-800 mt-1">{mockReport.summary.failed}</div>
+              <div className="text-3xl font-bold text-red-800 mt-1">{report.summary.failed}</div>
             </div>
             <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-orange-700">Errors</div>
-              <div className="text-3xl font-bold text-orange-800 mt-1">{mockReport.summary.errors}</div>
+              <div className="text-3xl font-bold text-orange-800 mt-1">{report.summary.errors}</div>
             </div>
             <div className="p-4 bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-600">Skipped</div>
-              <div className="text-3xl font-bold text-gray-700 mt-1">{mockReport.summary.skipped}</div>
+              <div className="text-3xl font-bold text-gray-700 mt-1">{report.summary.skipped}</div>
             </div>
           </div>
         </header>
