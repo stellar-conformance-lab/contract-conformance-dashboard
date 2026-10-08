@@ -71,7 +71,6 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-500">
                 <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Profile: {report.profile}</span>
                 <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Fixture: {report.fixture}</span>
-                <span className="italic">(Mocked Data)</span>
               </div>
             </div>
             <div className="text-left sm:text-right">
