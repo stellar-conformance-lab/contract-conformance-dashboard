@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { loadReport } from "@/lib/report-loader";
-import { Status } from "@/types";
+import { Status, ConformanceReport } from "@/types";
 
 export default function Dashboard() {
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  
+  const [report, setReport] = useState<ConformanceReport | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const report = useMemo(() => loadReport(), []);
+  useEffect(() => {
+    let isMounted = true;
+    loadReport().then(r => {
+      if (isMounted) {
+        setReport(r);
+        setLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const filteredResults = useMemo(() => {
     if (!report || !report.results) return [];
@@ -24,6 +36,17 @@ export default function Dashboard() {
   }, [filter, searchQuery, report]);
 
   // Error / Empty States for the report itself
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!report) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">

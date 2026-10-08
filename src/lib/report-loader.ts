@@ -1,5 +1,4 @@
 import { ConformanceReport, Status, Summary, ScenarioResult } from "@/types";
-import reportData from "@/data/report.json";
 
 function isValidStatus(status: unknown): status is Status {
   return typeof status === "string" && ["PASS", "FAIL", "ERROR", "SKIPPED"].includes(status);
@@ -48,14 +47,20 @@ function validateReport(data: unknown): data is ConformanceReport {
 }
 
 /**
- * Loads the current conformance report.
+ * Loads the current conformance report from the public CI endpoint.
  * This provides an architectural boundary so the UI does not directly
- * depend on the mock data source.
+ * depend on the data source.
  */
-export function loadReport(): ConformanceReport | null {
+export async function loadReport(): Promise<ConformanceReport | null> {
   try {
-    if (validateReport(reportData)) {
-      return reportData as ConformanceReport;
+    const res = await fetch("https://stellar-conformance-lab.github.io/contract-conformance/report.json");
+    if (!res.ok) {
+      console.error(`Failed to fetch report: HTTP ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    if (validateReport(data)) {
+      return data;
     } else {
       console.error("Conformance report validation failed");
       return null;
