@@ -88,7 +88,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
-        <div className="text-center">
+        <div className="text-center" role="status" aria-live="polite">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
           <p className="text-gray-600 font-medium">Loading report...</p>
         </div>
@@ -100,7 +100,12 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
         <div className="text-center bg-white p-8 rounded-xl shadow-sm border border-red-100 max-w-md w-full">
-          <h2 className="text-red-600 text-xl font-bold mb-2">Report Unavailable</h2>
+          <h2
+            className="text-red-600 text-xl font-bold mb-2"
+            role="alert"
+          >
+            Report Unavailable
+          </h2>
           <p className="text-gray-600">Failed to load the conformance report data.</p>
         </div>
       </div>
