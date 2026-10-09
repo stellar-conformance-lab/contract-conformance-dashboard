@@ -1,72 +1,164 @@
-import { ConformanceReport, Status, Summary, ScenarioResult } from "@/types";
+
+import {
+  ConformanceReport,
+  HistoryManifest,
+  HistoricalRun,
+  ScenarioResult,
+  Status,
+  Summary,
+} from "@/types";
+
+const REPORTS_BASE_URL =
+  "https://stellar-conformance-lab.github.io/contract-conformance";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
 function isValidStatus(status: unknown): status is Status {
-  return typeof status === "string" && ["PASS", "FAIL", "ERROR", "SKIPPED"].includes(status);
+  return (
+    typeof status === "string" &&
+    ["PASS", "FAIL", "ERROR", "SKIPPED"].includes(status)
+  );
 }
 
 function isValidSummary(summary: unknown): summary is Summary {
+  if (!isRecord(summary)) return false;
+
   return (
-    summary !== null &&
-    typeof summary === "object" &&
-    typeof (summary as Summary).total === "number" &&
-    typeof (summary as Summary).passed === "number" &&
-    typeof (summary as Summary).failed === "number" &&
-    typeof (summary as Summary).errors === "number" &&
-    typeof (summary as Summary).skipped === "number"
+    typeof summary.total === "number" &&
+    typeof summary.passed === "number" &&
+    typeof summary.failed === "number" &&
+    typeof summary.errors === "number" &&
+    typeof summary.skipped === "number"
   );
 }
 
 function isValidScenarioResult(result: unknown): result is ScenarioResult {
+  if (!isRecord(result)) return false;
+
   return (
-    result !== null &&
-    typeof result === "object" &&
-    typeof (result as ScenarioResult).test_id === "string" &&
-    typeof (result as ScenarioResult).description === "string" &&
-    isValidStatus((result as ScenarioResult).status) &&
-    typeof (result as ScenarioResult).expected_behavior === "string" &&
-    typeof (result as ScenarioResult).observed_behavior === "string"
+    typeof result.test_id === "string" &&
+    typeof result.description === "string" &&
+    isValidStatus(result.status) &&
+    typeof result.expected_behavior === "string" &&
+    typeof result.observed_behavior === "string"
   );
 }
 
 function validateReport(data: unknown): data is ConformanceReport {
-  if (!data || typeof data !== "object") return false;
-  
-  const d = data as Record<string, unknown>;
+  if (!isRecord(data)) return false;
 
-  if (typeof d.profile !== "string") return false;
-  if (typeof d.fixture !== "string") return false;
-  if (!isValidStatus(d.status)) return false;
-  if (!isValidSummary(d.summary)) return false;
-  if (!Array.isArray(d.results)) return false;
-  
-  for (const result of d.results) {
-    if (!isValidScenarioResult(result)) return false;
+  return (
+    typeof data.profile === "string" &&
+    typeof data.fixture === "string" &&
+    isValidStatus(data.status) &&
+    isValidSummary(data.summary) &&
+    Array.isArray(data.results) &&
+    data.results.every(isValidScenarioResult)
+  );
+}
+
+function isValidHistoricalRun(run: unknown): run is HistoricalRun {
+  if (!isRecord(run)) return false;
+
+  return (
+    typeof run.id === "string" &&
+    /^\d+$/.test(run.id) &&
+    typeof run.commit === "string" &&
+    typeof run.timestamp === "string" &&
+    !Number.isNaN(Date.parse(run.timestamp)) &&
+    typeof run.profile === "string" &&
+    typeof run.fixture === "string" &&
+    isValidStatus(run.status) &&
+    isValidSummary(run.summary) &&
+    typeof run.report === "string" &&
+    run.report === `history/${run.id}.json`
+  );
+}
+
+function validateManifest(data: unknown): data is HistoryManifest {
+  if (!isRecord(data) || !Array.isArray(data.runs)) return false;
+
+  const seenIds = new Set<string>();
+
+  for (const run of data.runs) {
+    if (!isValidHistoricalRun(run) || seenIds.has(run.id)) {
+      return false;
+    }
+    seenIds.add(run.id);
   }
-  
+
   return true;
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+  const response = await fetch(url, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} while fetching ${url}`);
+  }
+
+  return response.json();
 }
 
 /**
  * Loads the current conformance report from the public CI endpoint.
- * This provides an architectural boundary so the UI does not directly
- * depend on the data source.
  */
 export async function loadReport(): Promise<ConformanceReport | null> {
   try {
-    const res = await fetch("https://stellar-conformance-lab.github.io/contract-conformance/report.json");
-    if (!res.ok) {
-      console.error(`Failed to fetch report: HTTP ${res.status}`);
-      return null;
-    }
-    const data = await res.json();
-    if (validateReport(data)) {
-      return data;
-    } else {
-      console.error("Conformance report validation failed");
-      return null;
-    }
-  } catch (err) {
-    console.error("Failed to load conformance report", err);
+    const data = await fetchJson(`${REPORTS_BASE_URL}/report.json`);
+
+    if (validateReport(data)) return data;
+
+    console.error("Current conformance report validation failed");
+    return null;
+  } catch (error) {
+    console.error("Failed to load current conformance report", error);
+    return null;
+  }
+}
+
+/**
+ * Loads and validates the public historical-run manifest.
+ */
+export async function loadHistoryManifest(): Promise<HistoryManifest | null> {
+  try {
+    const data = await fetchJson(`${REPORTS_BASE_URL}/history/manifest.json`);
+
+    if (validateManifest(data)) return data;
+
+    console.error("Historical manifest validation failed");
+    return null;
+  } catch (error) {
+    console.error("Failed to load historical manifest", error);
+    return null;
+  }
+}
+
+/**
+ * Loads a historical report by its run ID.
+ * Only numeric run IDs are accepted to prevent arbitrary URL paths.
+ */
+export async function loadHistoricalReport(
+  runId: string,
+): Promise<ConformanceReport | null> {
+  if (!/^\d+$/.test(runId)) {
+    console.error("Invalid historical run ID");
+    return null;
+  }
+
+  try {
+    const data = await fetchJson(
+      `${REPORTS_BASE_URL}/history/${encodeURIComponent(runId)}.json`,
+    );
+
+    if (validateReport(data)) return data;
+
+    console.error(`Historical report validation failed for run ${runId}`);
+    return null;
+  } catch (error) {
+    console.error(`Failed to load historical report ${runId}`, error);
     return null;
   }
 }

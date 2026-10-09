@@ -1,35 +1,70 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { loadReport } from "@/lib/report-loader";
-import { Status, ConformanceReport } from "@/types";
+import {
+  loadReport,
+  loadHistoryManifest,
+  loadHistoricalReport,
+} from "@/lib/report-loader";
+import { Status, ConformanceReport, HistoricalRun } from "@/types";
 
 export default function Dashboard() {
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  
+
   const [report, setReport] = useState<ConformanceReport | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [historyRuns, setHistoryRuns] = useState<HistoricalRun[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState("latest");
+
   useEffect(() => {
     let isMounted = true;
-    loadReport().then(r => {
-      if (isMounted) {
-        setReport(r);
+
+    Promise.all([loadReport(), loadHistoryManifest()]).then(
+      ([currentReport, manifest]) => {
+        if (!isMounted) return;
+
+        setReport(currentReport);
+        setHistoryRuns(manifest?.runs ?? []);
         setLoading(false);
-      }
-    });
-    return () => { isMounted = false; };
+      },
+    );
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+
+  const handleRunChange = async (runId: string) => {
+    setSelectedRunId(runId);
+    setLoading(true);
+    setExpandedRow(null);
+    setFilter("ALL");
+    setSearchQuery("");
+
+    try {
+      const nextReport =
+        runId === "latest"
+          ? await loadReport()
+          : await loadHistoricalReport(runId);
+
+      setReport(nextReport);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const filteredResults = useMemo(() => {
     if (!report || !report.results) return [];
-    
+
     return report.results.filter((res) => {
       const matchesFilter = filter === "ALL" || res.status === filter;
-      const matchesSearch = 
-        res.test_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch =
+        res.test_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         res.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
@@ -73,7 +108,7 @@ export default function Dashboard() {
 
   const getBadge = (status: Status) => {
     return (
-      <span 
+      <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusColor(status)}`}
         aria-label={`Status: ${status}`}
       >
@@ -85,7 +120,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        
+
         {/* Header */}
         <header className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -95,13 +130,43 @@ export default function Dashboard() {
                 <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Profile: {report.profile}</span>
                 <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700">Fixture: {report.fixture}</span>
               </div>
+              <div className="mt-4 max-w-md">
+                <label
+                  htmlFor="run-selector"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Report run
+                </label>
+
+                <select
+                  id="run-selector"
+                  value={selectedRunId}
+                  onChange={(event) => void handleRunChange(event.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="latest">Latest report</option>
+
+                  {historyRuns.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {new Date(run.timestamp).toLocaleString()} - {run.status} -{" "}
+                      {run.summary.passed}/{run.summary.total} passed
+                    </option>
+                  ))}
+                </select>
+
+                {historyRuns.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Historical runs are currently unavailable.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="text-left sm:text-right">
               <div className="text-sm font-medium text-gray-500 mb-1">Overall Result</div>
               {getBadge(report.status)}
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mt-8">
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500">Total</div>
@@ -131,7 +196,7 @@ export default function Dashboard() {
           {/* Controls */}
           <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 space-y-4 md:space-y-0 md:flex md:justify-between md:items-center">
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Test Scenarios</h2>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <div className="relative w-full sm:w-64">
                 <input
@@ -154,11 +219,10 @@ export default function Dashboard() {
                     role="tab"
                     aria-selected={filter === f}
                     onClick={() => setFilter(f)}
-                    className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 ${
-                      filter === f
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 ${filter === f
                         ? "bg-gray-800 text-white shadow-sm ring-1 ring-gray-900"
                         : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                    }`}
+                      }`}
                   >
                     {f}
                   </button>
@@ -180,10 +244,10 @@ export default function Dashboard() {
             ) : (
               filteredResults.map((result) => {
                 const isExpanded = expandedRow === result.test_id;
-                
+
                 return (
                   <div key={result.test_id} className="transition-colors hover:bg-gray-50/50 group">
-                    <button 
+                    <button
                       className="w-full text-left p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus:outline-none focus:bg-gray-50"
                       onClick={() => setExpandedRow(isExpanded ? null : result.test_id)}
                       aria-expanded={isExpanded}
@@ -206,7 +270,7 @@ export default function Dashboard() {
                         </svg>
                       </div>
                     </button>
-                    
+
                     {isExpanded && (
                       <div id={`detail-${result.test_id}`} className="px-4 sm:px-6 pb-6 pt-2 bg-gray-50/80 border-t border-gray-100">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 sm:ml-[116px]">
@@ -222,23 +286,20 @@ export default function Dashboard() {
                               {result.expected_behavior}
                             </p>
                           </div>
-                          
-                          <div className={`bg-white p-4 sm:p-5 rounded-lg border shadow-sm relative overflow-hidden ${
-                            result.status === 'PASS' ? 'border-green-200' : 
-                            result.status === 'FAIL' ? 'border-red-200' : 
-                            result.status === 'ERROR' ? 'border-orange-200' : 'border-gray-200'
-                          }`}>
-                            <div className={`absolute top-0 left-0 w-1 h-full ${
-                              result.status === 'PASS' ? 'bg-green-500' : 
-                              result.status === 'FAIL' ? 'bg-red-500' : 
-                              result.status === 'ERROR' ? 'bg-orange-500' : 'bg-gray-500'
-                            }`}></div>
+
+                          <div className={`bg-white p-4 sm:p-5 rounded-lg border shadow-sm relative overflow-hidden ${result.status === 'PASS' ? 'border-green-200' :
+                              result.status === 'FAIL' ? 'border-red-200' :
+                                result.status === 'ERROR' ? 'border-orange-200' : 'border-gray-200'
+                            }`}>
+                            <div className={`absolute top-0 left-0 w-1 h-full ${result.status === 'PASS' ? 'bg-green-500' :
+                                result.status === 'FAIL' ? 'bg-red-500' :
+                                  result.status === 'ERROR' ? 'bg-orange-500' : 'bg-gray-500'
+                              }`}></div>
                             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                              <svg className={`w-4 h-4 ${
-                                result.status === 'PASS' ? 'text-green-500' : 
-                                result.status === 'FAIL' ? 'text-red-500' : 
-                                result.status === 'ERROR' ? 'text-orange-500' : 'text-gray-500'
-                              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className={`w-4 h-4 ${result.status === 'PASS' ? 'text-green-500' :
+                                  result.status === 'FAIL' ? 'text-red-500' :
+                                    result.status === 'ERROR' ? 'text-orange-500' : 'text-gray-500'
+                                }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>

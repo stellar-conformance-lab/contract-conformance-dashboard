@@ -23,3 +23,18 @@ export interface ConformanceReport {
   summary: Summary;
   results: ScenarioResult[];
 }
+
+export interface HistoricalRun {
+  id: string;
+  commit: string;
+  timestamp: string;
+  profile: string;
+  fixture: string;
+  status: Status;
+  summary: Summary;
+  report: string;
+}
+
+export interface HistoryManifest {
+  runs: HistoricalRun[];
+}
