@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   loadReport,
   loadHistoryManifest,
@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [report, setReport] = useState<ConformanceReport | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const requestVersion = useRef(0);
   const [historyRuns, setHistoryRuns] = useState<HistoricalRun[]>([]);
   const [selectedRunId, setSelectedRunId] = useState("latest");
 
@@ -38,7 +39,10 @@ export default function Dashboard() {
   }, []);
 
 
+
   const handleRunChange = async (runId: string) => {
+    const currentRequest = ++requestVersion.current;
+
     setSelectedRunId(runId);
     setLoading(true);
     setExpandedRow(null);
@@ -52,12 +56,18 @@ export default function Dashboard() {
           ? await loadReport()
           : await loadHistoricalReport(runId);
 
-      setReport(nextReport);
+      if (currentRequest === requestVersion.current) {
+        setReport(nextReport);
+      }
     } catch (error) {
-      console.error("Failed to change report run", error);
-      setReport(null);
+      if (currentRequest === requestVersion.current) {
+        console.error("Failed to change report run", error);
+        setReport(null);
+      }
     } finally {
-      setLoading(false);
+      if (currentRequest === requestVersion.current) {
+        setLoading(false);
+      }
     }
   };
 
