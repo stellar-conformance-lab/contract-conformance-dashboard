@@ -105,8 +105,12 @@ function validateManifest(data: unknown): data is HistoryManifest {
   return true;
 }
 
+
 async function fetchJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} while fetching ${url}`);
