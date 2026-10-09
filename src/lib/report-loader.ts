@@ -22,16 +22,29 @@ function isValidStatus(status: unknown): status is Status {
   );
 }
 
+
+
 function isValidSummary(summary: unknown): summary is Summary {
   if (!isRecord(summary)) return false;
 
-  return (
-    typeof summary.total === "number" &&
-    typeof summary.passed === "number" &&
-    typeof summary.failed === "number" &&
-    typeof summary.errors === "number" &&
-    typeof summary.skipped === "number"
-  );
+  const { total, passed, failed, errors, skipped } = summary;
+
+  const isValidCount = (value: unknown): value is number =>
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0;
+
+  if (
+    !isValidCount(total) ||
+    !isValidCount(passed) ||
+    !isValidCount(failed) ||
+    !isValidCount(errors) ||
+    !isValidCount(skipped)
+  ) {
+    return false;
+  }
+
+  return total === passed + failed + errors + skipped;
 }
 
 function isValidScenarioResult(result: unknown): result is ScenarioResult {

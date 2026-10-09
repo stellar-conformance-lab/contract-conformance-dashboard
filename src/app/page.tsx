@@ -44,6 +44,7 @@ export default function Dashboard() {
     setExpandedRow(null);
     setFilter("ALL");
     setSearchQuery("");
+    setReport(null);
 
     try {
       const nextReport =
@@ -52,6 +53,9 @@ export default function Dashboard() {
           : await loadHistoricalReport(runId);
 
       setReport(nextReport);
+    } catch (error) {
+      console.error("Failed to change report run", error);
+      setReport(null);
     } finally {
       setLoading(false);
     }
@@ -220,8 +224,8 @@ export default function Dashboard() {
                     aria-selected={filter === f}
                     onClick={() => setFilter(f)}
                     className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 ${filter === f
-                        ? "bg-gray-800 text-white shadow-sm ring-1 ring-gray-900"
-                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                      ? "bg-gray-800 text-white shadow-sm ring-1 ring-gray-900"
+                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                       }`}
                   >
                     {f}
@@ -288,17 +292,17 @@ export default function Dashboard() {
                           </div>
 
                           <div className={`bg-white p-4 sm:p-5 rounded-lg border shadow-sm relative overflow-hidden ${result.status === 'PASS' ? 'border-green-200' :
-                              result.status === 'FAIL' ? 'border-red-200' :
-                                result.status === 'ERROR' ? 'border-orange-200' : 'border-gray-200'
+                            result.status === 'FAIL' ? 'border-red-200' :
+                              result.status === 'ERROR' ? 'border-orange-200' : 'border-gray-200'
                             }`}>
                             <div className={`absolute top-0 left-0 w-1 h-full ${result.status === 'PASS' ? 'bg-green-500' :
-                                result.status === 'FAIL' ? 'bg-red-500' :
-                                  result.status === 'ERROR' ? 'bg-orange-500' : 'bg-gray-500'
+                              result.status === 'FAIL' ? 'bg-red-500' :
+                                result.status === 'ERROR' ? 'bg-orange-500' : 'bg-gray-500'
                               }`}></div>
                             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                               <svg className={`w-4 h-4 ${result.status === 'PASS' ? 'text-green-500' :
-                                  result.status === 'FAIL' ? 'text-red-500' :
-                                    result.status === 'ERROR' ? 'text-orange-500' : 'text-gray-500'
+                                result.status === 'FAIL' ? 'text-red-500' :
+                                  result.status === 'ERROR' ? 'text-orange-500' : 'text-gray-500'
                                 }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
