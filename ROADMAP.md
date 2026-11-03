@@ -59,15 +59,15 @@ The project follows these principles:
 | Phase | Name                             | Status         |
 | ----- | -------------------------------- | -------------- |
 | D0    | Discovery & Integration Audit    | ✅ Complete     |
-| D1    | Repository & UI Foundation       | 🔄 In Progress |
-| D2    | Dashboard MVP & UX               | ⏳ Pending      |
-| D3    | Report/Data Architecture         | ⏳ Pending      |
-| D4    | Real JSON Report Integration     | ⏳ Pending      |
-| D5    | GitHub / CI Artifact Integration | ⏳ Pending      |
-| D6    | Historical Runs & Reporting      | ⏳ Pending      |
-| D7    | Production Hardening             | ⏳ Pending      |
-| D8    | Deployment & Public Release      | ⏳ Pending      |
-| D9    | Post-Release Maintenance         | ⏳ Pending      |
+| D1    | Repository & UI Foundation       | ✅ Complete     |
+| D2    | Dashboard MVP & UX               | ✅ Complete     |
+| D3    | Report/Data Architecture         | ✅ Complete     |
+| D4    | Real JSON Report Integration     | ✅ Complete     |
+| D5    | GitHub / CI Artifact Integration | ✅ Complete     |
+| D6    | Historical Runs & Reporting      | ✅ Complete     |
+| D7    | Production Hardening             | ✅ Complete     |
+| D8    | Deployment & Public Release      | ✅ Complete     |
+| D9    | Maintenance & Contributor Wave   | 🔄 Active       |
 
 ---
 

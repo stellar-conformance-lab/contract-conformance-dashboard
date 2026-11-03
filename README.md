@@ -14,14 +14,13 @@ This repository does **not** execute smart contracts, interact with RPCs, or run
 
 ## Features
 
-* Conformance summary statistics for passed, failed, errored, and skipped tests.
-* Searchable and filterable test results.
-* Detailed inspection of expected and observed behavior.
-* Integration with published JSON reports.
-* Historical run selection.
-* Report validation and handling of unavailable or malformed data.
-* Request timeouts and protection against stale responses.
-* Static export and deployment through GitHub Pages.
+* **Summary Metrics:** Overall pass/fail status and breakdown of passed, failed, errored, and skipped scenarios.
+* **Historical Run Selector:** Seamlessly switch between the latest report and previous runs from historical manifest data.
+* **Comparative Run Diff Mode:** Compare any active run against a baseline historical run to inspect metric deltas, fixed tests, and regressed assertions.
+* **Scenario Search & Filtering:** Filter results by status, view diff-only scenarios, or search by test ID and description.
+* **Report JSON Export:** One-click download of the complete structured report JSON for external analysis.
+* **Resilient Data Ingestion:** Schema validation, duplicate ID rejection, path traversal protection, and network timeout guards.
+* **Automated CI Quality Gates:** Pull request and push workflows ensuring continuous linting, unit testing, and static export verification.
 
 ## Architecture
 
@@ -30,13 +29,13 @@ The data flow is:
 1. The conformance engine executes the tests.
 2. The engine publishes JSON report artifacts, including the latest report and historical-run data.
 3. The dashboard fetches and validates the published JSON.
-4. The interface presents the results and allows users to inspect previous runs.
+4. The interface presents the results, enables historical comparison, and allows users to inspect individual scenarios.
 
 The dashboard remains a static frontend; it does not require its own backend, database, or authentication service.
 
 ## Running Locally
 
-Requirements: Node.js and npm.
+Requirements: Node.js (v20+ recommended) and npm.
 
 Install dependencies:
 
@@ -52,12 +51,12 @@ npm run dev
 
 Open http://localhost:3000.
 
-## Verification
+## Verification & Testing
 
-Run the production build:
+Run unit tests:
 
 ```bash
-npm run build
+npm test
 ```
 
 Run ESLint:
@@ -66,29 +65,28 @@ Run ESLint:
 npm run lint
 ```
 
-Both commands passed during the latest local verification. The live dashboard was also checked for report loading, historical-run selection, search, filters, and interface states.
+Run the production static export build:
 
-## Deployment
+```bash
+npm run build
+```
 
-The dashboard is deployed to GitHub Pages using GitHub Actions. The workflow builds the Next.js application as a static export and publishes the generated output.
+## Continuous Integration & Deployment
+
+The repository uses GitHub Actions for continuous quality assurance and deployment:
+
+* **CI Workflow (`ci.yml`):** Runs `npm ci`, unit tests (`vitest`), linter (`eslint`), and static build on all pull requests and pushes to `main`.
+* **Deploy Workflow (`deploy.yml`):** Automatically builds and publishes the static export to GitHub Pages on merges to `main`.
 
 Live site: https://stellar-conformance-lab.github.io/contract-conformance-dashboard/
 
-## Security and Known Limitations
+## Contributor Backlog & Future Work
 
-* The production dependency audit reported zero vulnerabilities.
-* The full dependency audit identified a high-severity vulnerability in the development-tooling dependency chain involving `braces`. A compatible fix was not available during the audit. This remains unresolved and should be revisited when a compatible upstream fix becomes available.
-* Automated unit and end-to-end test coverage for report validation, request timeouts, historical selection, and request races remains a follow-up task.
-* The dashboard displays published engine results; it does not independently establish the correctness of the engine's tests.
+As part of the ongoing maintainer initiatives and community grants, open contributor tracks include:
 
-## Future Contributions
-
-Potential follow-up work includes:
-
-* Add automated tests for report-loader validation and failure handling.
-* Add end-to-end tests for historical-run selection and asynchronous request races.
-* Complete a keyboard-navigation and screen-reader accessibility audit.
-* Add a comparison view for historical conformance runs.
-* Revisit the development-tooling vulnerability when a compatible fix becomes available.
+* **End-to-End Testing:** Add automated Playwright / Cypress browser test suites for regression testing interactive features.
+* **Embeddable Conformance Badges:** Create an SVG badge generator displaying live SEP-41 conformance pass rates in consumer contract READMEs.
+* **Accessibility Enhancements:** Complete a comprehensive WCAG 2.1 AA screen-reader audit.
+* **Multi-Standard Support:** Interface tabs for visualizing additional profiles (e.g. SEP-42) as the conformance engine expands.
 
 Contributions should preserve the separation between the conformance engine, which owns test execution and authoritative results, and this dashboard, which consumes and presents published reports.
